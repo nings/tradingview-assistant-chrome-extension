@@ -16,13 +16,22 @@
         return sendResponse()
       }
       if(action.workerStatus !== null) {
-        const msg = `Waiting for end previous work. Status: ${action.workerStatus}`
-        console.log(msg)
-        ui.autoCloseAlert(msg)
-        return sendResponse()
+        // Check if worker has timed out (prevent deadlock)
+        const now = Date.now()
+        if (action.workerStatusTimestamp && (now - action.workerStatusTimestamp) > action.WORKER_TIMEOUT_MS) {
+          console.warn(`[WARN] Worker status '${action.workerStatus}' timed out after ${Math.round((now - action.workerStatusTimestamp) / 1000)}s. Auto-clearing.`)
+          action.workerStatus = null
+          action.workerStatusTimestamp = null
+        } else {
+          const msg = `Waiting for end previous work. Status: ${action.workerStatus}`
+          console.log(msg)
+          ui.autoCloseAlert(msg)
+          return sendResponse()
+        }
       }
 
       action.workerStatus = request.action
+      action.workerStatusTimestamp = Date.now()
       try {
         sendResponse()
         switch (request.action) {
@@ -67,9 +76,12 @@
       } catch (err) {
         console.error(err)
         await ui.showErrorPopup(`An error has occurred.\n\nReload the page and try again.\nYou can describe the problem by following <a href="https://github.com/akumidv/tradingview-assistant-chrome-extension/issues" target="_blank">the link</a>.\n\nError message: ${err.message}`)
+      } finally {
+        // Always clear worker status, even if error occurred
+        action.workerStatus = null
+        action.workerStatusTimestamp = null
+        ui.statusMessageRemove()
       }
-      action.workerStatus = null
-      ui.statusMessageRemove()
     }
   );
 

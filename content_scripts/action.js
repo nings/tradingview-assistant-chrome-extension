@@ -1,5 +1,7 @@
 const action = {
-  workerStatus: null
+  workerStatus: null,
+  workerStatusTimestamp: null,
+  WORKER_TIMEOUT_MS: 30 * 60 * 1000 // 30 minutes timeout
 }
 
 const message = {
