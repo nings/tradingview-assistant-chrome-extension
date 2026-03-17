@@ -28,7 +28,8 @@ window.addEventListener('message', messageHandler)
 
 async function messageHandler(event) {
   const url = window.location && window.location.origin ? window.location.origin : 'https://www.tradingview.com'
-  if (!event.origin.startsWith(url) || !event.data ||
+  // Use strict equality check to prevent origin spoofing (e.g., www.tradingview.com.attacker.com)
+  if (event.origin !== url || !event.data ||
     !event.data.hasOwnProperty('name') || event.data.name !== 'iondvPage' ||
     !event.data.hasOwnProperty('action'))
     return
