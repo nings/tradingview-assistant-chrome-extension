@@ -7,7 +7,9 @@
 
 (async function() {
 
-  setInterval(ui.checkInjectedElements, 1000); // Add action to set strategy parameters window
+  // Add action to set strategy parameters window
+  // Store interval ID for cleanup
+  const uiCheckInterval = setInterval(ui.checkInjectedElements, 1000);
 
   chrome.runtime.onMessage.addListener(
     async function(request, sender, sendResponse) {
@@ -87,9 +89,10 @@
 
 
   const dialogWindowNode = await page.waitForSelector(SEL.tvDialogRoot, 0)
+  let tvObserver = null
   if(dialogWindowNode) {
-    const tvObserver = new MutationObserver(tv.dialogHandler);
-    console.log('[INFO] Observer added to dialogWindowNone')
+    tvObserver = new MutationObserver(tv.dialogHandler);
+    console.log('[INFO] Observer added to dialogWindowNode')
     tvObserver.observe(dialogWindowNode, {
       childList: true,
       subtree: true,
@@ -98,5 +101,16 @@
     });
     await tv.dialogHandler() // First run
   }
+
+  // Cleanup on page unload to prevent memory leaks
+  window.addEventListener('beforeunload', () => {
+    console.log('[INFO] Cleaning up extension resources before page unload')
+    if (uiCheckInterval) {
+      clearInterval(uiCheckInterval)
+    }
+    if (tvObserver) {
+      tvObserver.disconnect()
+    }
+  })
 
 })();
