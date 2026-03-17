@@ -160,7 +160,8 @@ tv.setStrategyParams = async (name, propVal, isDeepTest = false, keepStrategyPar
     if (existingDialog) {
       dialogPrepared = await tv.changeDialogTabToInput()
     }
-  } catch {
+  } catch (err) {
+    console.warn('[WARN] tv.getStrategy: Failed to check existing dialog:', err.message)
     dialogPrepared = false
   }
 
@@ -236,7 +237,8 @@ tv._setStrategyParamsLegacy = async (name, propVal, isDeepTest = false, keepStra
   let popupVisibleHeight = 917
   try {
     popupVisibleHeight = page.$(SEL.indicatorScroll)?.getBoundingClientRect()?.bottom || 917
-  } catch {
+  } catch (err) {
+    console.warn('[WARN] tv._setStrategyParamsLegacy: Failed to get popup height:', err.message)
   }
   let indicProperties = document.querySelectorAll(SEL.indicatorProperty)
   const propKeys = Object.keys(propVal)
@@ -252,7 +254,8 @@ tv._setStrategyParamsLegacy = async (name, propVal, isDeepTest = false, keepStra
           if (indicProperties[i].getBoundingClientRect()?.bottom > popupVisibleHeight)
             await page.waitForTimeout(50)
         }
-      } catch {
+      } catch (err) {
+        console.warn('[WARN] tv._setStrategyParamsLegacy: Failed to scroll property into view:', err.message)
       }
       setPropertiesNames[propText] = true
       const propClassName = indicProperties[i].getAttribute('class')

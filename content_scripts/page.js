@@ -18,7 +18,8 @@ const reactValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement
 page.$ = function (selector) {
   try {
     return document.querySelector(selector)
-  } catch {
+  } catch (err) {
+    console.warn(`[WARN] page.$: Invalid selector "${selector}":`, err.message)
     return null
   }
 }
@@ -33,14 +34,16 @@ page.waitForSelector = async (selector, timeout = 5000, isHide = false, parentEl
     let elem = null
     try {
       elem = parentEl.querySelector(selector)
-    } catch {
+    } catch (err) {
+      console.warn(`[WARN] page.waitForSelector: Invalid selector "${selector}":`, err.message)
     }
     const tikTime = timeout === 0 ? 1000 : 50
     while (timeout === 0 || (!isHide && !elem) || (isHide && !!elem)) {
       await page.waitForTimeout(tikTime)
       try {
         elem = parentEl.querySelector(selector)
-      } catch {
+      } catch (err) {
+        console.warn(`[WARN] page.waitForSelector retry: Invalid selector "${selector}":`, err.message)
       }
 
       iter += 1

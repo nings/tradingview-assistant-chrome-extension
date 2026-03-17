@@ -39,7 +39,8 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
       ui.statusMessage(`<p>From default and previous test. Best "${testResults.optParamName}": ${backtest.convertValue(testResults.bestValue)}</p>`)
       console.log('Init best value', testResults.bestValue)
       // console.log(testResults.perfomanceSummary)
-    } catch {
+    } catch (err) {
+      console.warn('[WARN] backtest.testStrategy: Failed to display init best value:', err.message)
     }
   }
   // console.log('bestValue', testResults.bestValue)
@@ -101,7 +102,8 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
         parseTime = optRes.data['_parseTime_']
         optRes['data']['_duration_'] = durationTime
       }
-    } catch {
+    } catch (err) {
+      console.warn('[WARN] backtest.testStrategy: Failed to extract timing data:', err.message)
     }
     if (optRes.hasOwnProperty('data') && optRes.hasOwnProperty('bestValue') && optRes.bestValue !== null && optRes.hasOwnProperty('bestPropVal')) {
       testResults.bestValue = optRes.bestValue
@@ -111,7 +113,8 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
         text += optRes.hasOwnProperty('currentValue') ? `<p>Current "${testResults.optParamName}": ${backtest.convertValue(optRes.currentValue)}</p>` : ''
         text += optRes.error !== null ? `<p style="color: red">${optRes.message}</p>` : optRes.message ? `<p>${optRes.message}</p>` : ''
         ui.statusMessage(text)
-      } catch {
+      } catch (err) {
+        console.warn('[WARN] backtest.testStrategy: Failed to update status message (cycle with data):', err.message)
       }
     } else {
       try {
@@ -119,7 +122,8 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
         text += optRes.currentValue ? `<p>Current "${testResults.optParamName}": ${backtest.convertValue(optRes.currentValue)}</p>` : `<p>Current "${testResults.optParamName}": error</p>`
         text += optRes.error !== null ? `<p style="color: red">${optRes.message}</p>` : optRes.message ? `<p>${optRes.message}</p>` : ''
         ui.statusMessage(text)
-      } catch {
+      } catch (err) {
+        console.warn('[WARN] backtest.testStrategy: Failed to update status message (cycle without data):', err.message)
       }
     }
   }
