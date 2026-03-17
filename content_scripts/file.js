@@ -1,4 +1,8 @@
-const file = {}
+const file = {
+  MAX_FILE_SIZE_MB: 10,
+  MAX_FILES_COUNT: 50,
+  ALLOWED_MIME_TYPES: ['text/csv', 'text/plain', 'application/vnd.ms-excel']
+}
 
 file.saveAs = (text, filename) => {
   let aData = document.createElement('a');
@@ -12,12 +16,34 @@ file.saveAs = (text, filename) => {
 file.upload = async (handler, endOfMsg, isMultiple = false) => {
   let fileUploadEl = document.createElement('input');
   fileUploadEl.type = 'file';
+  fileUploadEl.accept = '.csv,text/csv';
   if(isMultiple)
     fileUploadEl.multiple = 'multiple';
   fileUploadEl.addEventListener('change', async () => {
     let message = isMultiple ? 'File upload results:\n' : 'File upload result:\n'
-    for(let file of fileUploadEl.files) {
-      message += await handler(file)
+
+    // Validate file count
+    if (fileUploadEl.files.length > file.MAX_FILES_COUNT) {
+      message = `Error: Too many files selected (${fileUploadEl.files.length}). Maximum is ${file.MAX_FILES_COUNT} files.`
+      await ui.showPopup(message)
+      ui.isMsgShown = false
+      return
+    }
+
+    for(let uploadedFile of fileUploadEl.files) {
+      // Validate file size
+      const fileSizeMB = uploadedFile.size / (1024 * 1024)
+      if (fileSizeMB > file.MAX_FILE_SIZE_MB) {
+        message += `  - ${uploadedFile.name}: File too large (${fileSizeMB.toFixed(2)}MB). Maximum is ${file.MAX_FILE_SIZE_MB}MB.\n`
+        continue
+      }
+
+      // Validate MIME type (if browser provides it)
+      if (uploadedFile.type && !file.ALLOWED_MIME_TYPES.includes(uploadedFile.type)) {
+        console.warn(`[WARN] Suspicious MIME type for ${uploadedFile.name}: ${uploadedFile.type}`)
+      }
+
+      message += await handler(uploadedFile)
     }
     message += endOfMsg ? '\n' + endOfMsg : ''
     await ui.showPopup(message)
@@ -32,10 +58,22 @@ file.parseCSV = async (fileData) => {
     const CSV_FILENAME = fileData.name
     const isCSV = CSV_FILENAME.toLowerCase().endsWith('.csv')
     if(!isCSV) return reject(`please upload correct file.`)
+
+    // Validate file size before reading
+    const maxSizeBytes = file.MAX_FILE_SIZE_MB * 1024 * 1024
+    if (fileData.size > maxSizeBytes) {
+      return reject(`File ${CSV_FILENAME} is too large (${(fileData.size / (1024 * 1024)).toFixed(2)}MB). Maximum is ${file.MAX_FILE_SIZE_MB}MB.`)
+    }
+
     const reader = new FileReader();
     reader.addEventListener('load', async (event) => {
       if(!event.target.result) return reject(`there error when loading content from the file ${CSV_FILENAME}`)
       const CSV_VALUE = event.target.result
+
+      // Validate content length
+      if (CSV_VALUE.length > maxSizeBytes) {
+        return reject(`File content too large. Maximum is ${file.MAX_FILE_SIZE_MB}MB.`)
+      }
       try {
         const csvData = parseCSV2JSON(CSV_VALUE)
         if (csvData && csvData.length)
@@ -55,6 +93,15 @@ file.uploadHandler = async (fileData) => {
   const propVal = {}
   let strategyName = null
   const csvData = await file.parseCSV(fileData)
+
+  // Validate CSV data structure
+  if (!csvData || csvData.length === 0) {
+    return `  - ${fileData.name}: Empty CSV file or no valid data found.\n`
+  }
+  if (!csvData[0]) {
+    return `  - ${fileData.name}: Invalid CSV structure - no header row found.\n`
+  }
+
   const headers = Object.keys(csvData[0])
   const missColumns = ['Name','Value'].filter(columnName => !headers.includes(columnName.toLowerCase()))
   if(missColumns && missColumns.length)
